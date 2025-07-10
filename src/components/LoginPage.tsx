@@ -129,9 +129,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSignUp, onGuestLogin, 
                     placeholder="Enter invite code"
                   />
                 </div>
-                <p className="text-white/60 text-xs">
-                  Enter "welcome123" for instant access
-                </p>
+
               </div>
             ) : (
               <>
