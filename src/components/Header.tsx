@@ -15,7 +15,7 @@ const Header: React.FC<HeaderProps> = ({ user, onShowProfile }) => {
           <div className="flex items-center space-x-4 animate-fadeInLeft">
             <div className="relative">
               <img 
-                src="/TMM_Logo.jpg" 
+                src="../TMM_Logo.jpg" 
                 alt="TMM Logo" 
                 className="w-16 h-16 rounded-2xl shadow-lg object-cover border-2 border-white/20"
               />
