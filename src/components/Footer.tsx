@@ -8,7 +8,7 @@ const Footer: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-center space-y-6 md:space-y-0">
           <div className="flex items-center space-x-4 animate-fadeInLeft">
             <img 
-              src="/TMM_Logo.jpg" 
+              src="public/TMM_Logo.jpg" 
               alt="TMM Logo" 
               className="w-12 h-12 rounded-2xl shadow-lg object-cover border-2 border-white/20"
             />
