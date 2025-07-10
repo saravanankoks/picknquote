@@ -4,17 +4,20 @@ import { Mail, Lock, User, Key, Eye, EyeOff, Sparkles, Shield } from 'lucide-rea
 interface LoginPageProps {
   onLogin: (email: string, password: string) => Promise<void>;
   onSignUp: (email: string, password: string, name: string, inviteKey: string) => Promise<void>;
+  onGuestLogin: (inviteCode: string) => Promise<void>;
   isLoading: boolean;
   error: string | null;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSignUp, isLoading, error }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSignUp, onGuestLogin, isLoading, error }) => {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showGuestLogin, setShowGuestLogin] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     name: '',
-    inviteKey: ''
+    inviteKey: '',
+    guestCode: ''
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -29,7 +32,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSignUp, isLoading, err
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isSignUp) {
+    if (showGuestLogin) {
+      await onGuestLogin(formData.guestCode);
+    } else if (isSignUp) {
       await onSignUp(formData.email, formData.password, formData.name, formData.inviteKey);
     } else {
       await onLogin(formData.email, formData.password);
@@ -41,15 +46,22 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSignUp, isLoading, err
       email: '',
       password: '',
       name: '',
-      inviteKey: ''
+      inviteKey: '',
+      guestCode: ''
     });
   };
 
   const toggleMode = () => {
     setIsSignUp(!isSignUp);
+    setShowGuestLogin(false);
     resetForm();
   };
 
+  const toggleGuestMode = () => {
+    setShowGuestLogin(!showGuestLogin);
+    setIsSignUp(false);
+    resetForm();
+  };
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
       {/* Animated Background */}
@@ -84,10 +96,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSignUp, isLoading, err
               <h1 className="text-3xl font-bold text-white">TMM Smart Select</h1>
             </div>
             <p className="text-white/80 text-lg">
-              {isSignUp ? 'Create your account' : 'Welcome back!'}
+              {showGuestLogin ? 'Quick Access' : isSignUp ? 'Create your account' : 'Welcome back!'}
             </p>
             <p className="text-white/60 text-sm mt-2">
-              {isSignUp ? 'Join our digital marketing platform' : 'Sign in to continue to your dashboard'}
+              {showGuestLogin ? 'Enter invite code for instant access' : 
+               isSignUp ? 'Join our digital marketing platform' : 'Sign in to continue to your dashboard'}
             </p>
           </div>
 
@@ -100,6 +113,28 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSignUp, isLoading, err
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Guest Login Form */}
+            {showGuestLogin ? (
+              <div className="space-y-2">
+                <label className="block text-white/80 text-sm font-medium">Invite Code</label>
+                <div className="relative">
+                  <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/60" />
+                  <input
+                    type="text"
+                    name="guestCode"
+                    value={formData.guestCode}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:border-blue-400 focus:bg-white/20 transition-all duration-300"
+                    placeholder="Enter invite code"
+                  />
+                </div>
+                <p className="text-white/60 text-xs">
+                  Enter "welcome123" for instant access
+                </p>
+              </div>
+            ) : (
+              <>
             {/* Name Field (Sign Up Only) */}
             {isSignUp && (
               <div className="space-y-2">
@@ -181,6 +216,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSignUp, isLoading, err
                 </p>
               </div>
             )}
+            </>
+            )}
 
             {/* Submit Button */}
             <button
@@ -191,39 +228,66 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSignUp, isLoading, err
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>{isSignUp ? 'Creating Account...' : 'Signing In...'}</span>
+                  <span>
+                    {showGuestLogin ? 'Accessing...' : 
+                     isSignUp ? 'Creating Account...' : 'Signing In...'}
+                  </span>
                 </>
               ) : (
                 <>
                   <Shield className="w-5 h-5" />
-                  <span>{isSignUp ? 'Create Account' : 'Sign In'}</span>
+                  <span>
+                    {showGuestLogin ? 'Quick Access' : 
+                     isSignUp ? 'Create Account' : 'Sign In'}
+                  </span>
                 </>
               )}
             </button>
           </form>
 
-          {/* Toggle Mode */}
+          {/* Toggle Modes */}
           <div className="mt-8 text-center">
-            <p className="text-white/60">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-            </p>
-            <button
-              onClick={toggleMode}
-              className="mt-2 text-blue-300 hover:text-blue-200 font-medium transition-colors"
-            >
-              {isSignUp ? 'Sign In' : 'Sign Up'}
-            </button>
+            {!showGuestLogin && (
+              <>
+                <p className="text-white/60">
+                  {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+                </p>
+                <button
+                  onClick={toggleMode}
+                  className="mt-2 text-blue-300 hover:text-blue-200 font-medium transition-colors"
+                >
+                  {isSignUp ? 'Sign In' : 'Sign Up'}
+                </button>
+              </>
+            )}
+            
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <p className="text-white/60 text-sm mb-2">
+                {showGuestLogin ? 'Want to create a permanent account?' : 'Just want to try it out?'}
+              </p>
+              <button
+                onClick={toggleGuestMode}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105"
+              >
+                {showGuestLogin ? 'Create Account' : '🚀 Quick Access'}
+              </button>
+            </div>
           </div>
 
           {/* Trial Info */}
-          {isSignUp && (
+          {(isSignUp || showGuestLogin) && (
             <div className="mt-6 p-4 bg-green-500/20 border border-green-400/30 rounded-xl">
               <div className="flex items-center space-x-2 mb-2">
                 <Sparkles className="w-4 h-4 text-green-300" />
-                <span className="text-green-300 font-medium text-sm">7-Day Free Trial</span>
+                <span className="text-green-300 font-medium text-sm">
+                  {showGuestLogin ? 'Instant Access' : '7-Day Free Trial'}
+                </span>
               </div>
               <p className="text-green-200 text-xs">
-                Start with 3 free quotes and explore all features for 7 days!
+                {showGuestLogin ? 
+                  'Get immediate access with 3 free quotes and explore all features!' :
+                  'Start with 3 free quotes and explore all features for 7 days!'
+                }
               </p>
             </div>
           )}

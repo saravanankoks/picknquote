@@ -32,9 +32,18 @@ const Header: React.FC<HeaderProps> = ({ user, onShowProfile }) => {
           <div className="flex items-center space-x-6 animate-fadeInRight">
             {user ? (
               <div className="flex items-center space-x-4">
+                {user.isGuest && (
+                  <div className="bg-orange-500/20 border border-orange-400/30 rounded-xl px-3 py-1">
+                    <span className="text-orange-300 text-sm font-medium">👤 Guest Mode</span>
+                  </div>
+                )}
                 <div className="hidden md:block text-right text-white/90">
-                  <p className="text-sm font-medium">Welcome, {user.name}</p>
-                  <p className="text-xs capitalize">{user.subscriptionTier} Plan</p>
+                  <p className="text-sm font-medium">
+                    Welcome, {user.isGuest ? 'Guest' : user.name}
+                  </p>
+                  <p className="text-xs capitalize">
+                    {user.isGuest ? 'Guest Access' : `${user.subscriptionTier} Plan`}
+                  </p>
                 </div>
                 <button
                   onClick={onShowProfile}

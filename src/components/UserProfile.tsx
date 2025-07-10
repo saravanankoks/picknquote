@@ -9,13 +9,15 @@ interface UserProfileProps {
   onSignOut: () => void;
   onBackToDashboard: () => void;
   onGenerateQuotePDF: (quote: UserQuote) => Promise<void>;
+  onConvertToAccount?: () => void;
 }
 
 const UserProfile: React.FC<UserProfileProps> = ({ 
   user, 
   onSignOut, 
   onBackToDashboard,
-  onGenerateQuotePDF 
+  onGenerateQuotePDF,
+  onConvertToAccount
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'quotes' | 'plans'>('overview');
   const [quotes, setQuotes] = useState<UserQuote[]>([]);
@@ -223,27 +225,62 @@ const UserProfile: React.FC<UserProfileProps> = ({
 
         {/* Profile Header */}
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-8 mb-8">
+          {/* Guest Mode Banner */}
+          {user.isGuest && (
+            <div className="bg-orange-500/20 border border-orange-400/30 rounded-xl p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">👤</span>
+                  <div>
+                    <h3 className="text-orange-200 font-bold">Guest Mode Active</h3>
+                    <p className="text-orange-300 text-sm">
+                      You're using guest access. Create a permanent account to save your data.
+                    </p>
+                  </div>
+                </div>
+                {onConvertToAccount && (
+                  <button
+                    onClick={onConvertToAccount}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Create Account
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center space-x-6">
             <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
               <span className="text-3xl font-bold text-white">
-                {user.name.charAt(0).toUpperCase()}
+                {user.isGuest ? '👤' : user.name.charAt(0).toUpperCase()}
               </span>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Welcome, {user.name}!</h1>
-              <p className="text-white/80 text-lg">{user.email}</p>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                Welcome, {user.isGuest ? 'Guest User' : user.name}!
+              </h1>
+              <p className="text-white/80 text-lg">
+                {user.isGuest ? 'Guest Access' : user.email}
+              </p>
               <div className="flex items-center space-x-4 mt-3">
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                   user.subscriptionTier === 'premium' ? 'bg-purple-500/20 text-purple-200' :
                   user.subscriptionTier === 'standard' ? 'bg-blue-500/20 text-blue-200' :
                   'bg-gray-500/20 text-gray-200'
                 }`}>
-                  {user.subscriptionTier === 'free' ? 'Free Trial' : 
+                  {user.isGuest ? 'Guest Access' :
+                   user.subscriptionTier === 'free' ? 'Free Trial' : 
                    user.subscriptionTier.charAt(0).toUpperCase() + user.subscriptionTier.slice(1)} Plan
                 </span>
-                {isTrialExpired && (
+                {isTrialExpired && !user.isGuest && (
                   <span className="px-3 py-1 bg-red-500/20 text-red-200 rounded-full text-sm font-medium">
                     Trial Expired
+                  </span>
+                )}
+                {user.isGuest && (
+                  <span className="px-3 py-1 bg-orange-500/20 text-orange-200 rounded-full text-sm font-medium">
+                    Temporary Session
                   </span>
                 )}
               </div>
@@ -357,11 +394,15 @@ const UserProfile: React.FC<UserProfileProps> = ({
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-white/70">Name</label>
-                      <div className="mt-1 text-white">{user.name}</div>
+                      <div className="mt-1 text-white">
+                        {user.isGuest ? 'Guest User' : user.name}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-white/70">Email</label>
-                      <div className="mt-1 text-white">{user.email}</div>
+                      <div className="mt-1 text-white">
+                        {user.isGuest ? 'Not provided (Guest)' : user.email}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-white/70">Member Since</label>
@@ -379,7 +420,9 @@ const UserProfile: React.FC<UserProfileProps> = ({
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-white/70">Current Plan</label>
-                      <div className="mt-1 text-white capitalize">{user.subscriptionTier} Plan</div>
+                      <div className="mt-1 text-white capitalize">
+                        {user.isGuest ? 'Guest Access' : `${user.subscriptionTier} Plan`}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-white/70">Quotes Remaining</label>

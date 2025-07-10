@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './config/firebase';
-import { signIn, signUp, getUserData } from './services/authService';
+import { signIn, signUp, getUserData, guestLogin, getGuestUser, updateGuestUser, clearGuestSession } from './services/authService';
 import { saveQuoteToDatabase } from './services/quoteService';
 import { User as UserType, UserQuote, SUBSCRIPTION_FEATURES } from './types/user';
 import LoginPage from './components/LoginPage';
@@ -48,6 +48,14 @@ function App() {
 
   // Check authentication state
   useEffect(() => {
+    // First check for guest user
+    const guestUser = getGuestUser();
+    if (guestUser) {
+      setUser(guestUser);
+      setIsLoading(false);
+      return;
+    }
+    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
@@ -142,7 +150,20 @@ function App() {
     }
   };
 
+  const handleGuestLogin = async (inviteCode: string) => {
+    setAuthError(null);
+    try {
+      const guestUser = await guestLogin(inviteCode);
+      setUser(guestUser);
+    } catch (error: any) {
+      setAuthError(error.message);
+      throw error;
+    }
+  };
   const handleSignOut = () => {
+    if (user?.isGuest) {
+      clearGuestSession();
+    }
     setUser(null);
     setShowProfile(false);
     // Reset all state
@@ -165,11 +186,13 @@ function App() {
   const handleServiceAdd = (service: Service) => {
     if (!user) return;
     
-    // Check subscription limits for advanced features
-    const features = SUBSCRIPTION_FEATURES[user.subscriptionTier];
-    if (!features.advancedFeatures && service.id.includes('premium')) {
-      alert('Premium features are not available in your current plan. Please upgrade to access this service.');
-      return;
+    // Check subscription limits for advanced features (skip for guests)
+    if (!user.isGuest) {
+      const features = SUBSCRIPTION_FEATURES[user.subscriptionTier];
+      if (!features.advancedFeatures && service.id.includes('premium')) {
+        alert('Premium features are not available in your current plan. Please upgrade to access this service.');
+        return;
+      }
     }
     
     if (service.requiresForm) {
@@ -295,10 +318,12 @@ function App() {
   const handleGeneratePDF = async (): Promise<Blob> => {
     if (!user) throw new Error('User not authenticated');
     
-    // Check PDF download limits
-    const features = SUBSCRIPTION_FEATURES[user.subscriptionTier];
-    if (features.pdfDownloads !== -1 && user.quotesUsed >= features.pdfDownloads) {
-      throw new Error('PDF download limit reached. Please upgrade your plan.');
+    // Check PDF download limits (skip for guests)
+    if (!user.isGuest) {
+      const features = SUBSCRIPTION_FEATURES[user.subscriptionTier];
+      if (features.pdfDownloads !== -1 && user.quotesUsed >= features.pdfDownloads) {
+        throw new Error('PDF download limit reached. Please upgrade your plan.');
+      }
     }
     
     const element = document.getElementById('order-summary');
@@ -354,7 +379,14 @@ function App() {
   const handleSubmitQuote = async (): Promise<void> => {
     if (!user) throw new Error('User not authenticated');
     
-    // Check quote limits
+    // For guest users, update local storage instead of database
+    if (user.isGuest) {
+      updateGuestUser({ quotesUsed: user.quotesUsed + 1 });
+      setUser(prev => prev ? { ...prev, quotesUsed: prev.quotesUsed + 1 } : null);
+      return;
+    }
+    
+    // Check quote limits for registered users
     const features = SUBSCRIPTION_FEATURES[user.subscriptionTier];
     if (features.quotesLimit !== -1 && user.quotesUsed >= features.quotesLimit) {
       throw new Error('Quote limit reached. Please upgrade your plan.');
@@ -423,6 +455,7 @@ function App() {
       <LoginPage
         onLogin={handleLogin}
         onSignUp={handleSignUp}
+        onGuestLogin={handleGuestLogin}
         isLoading={isLoading}
         error={authError}
       />
@@ -437,6 +470,11 @@ function App() {
         onSignOut={handleSignOut}
         onBackToDashboard={() => setShowProfile(false)}
         onGenerateQuotePDF={handleGenerateQuotePDF}
+        onConvertToAccount={() => {
+          // Navigate back to login with sign up mode
+          setShowProfile(false);
+          handleSignOut();
+        }}
       />
     );
   }

@@ -2,6 +2,7 @@ export interface User {
   uid: string;
   email: string;
   name: string;
+  isGuest?: boolean;
   subscriptionTier: 'free' | 'standard' | 'premium';
   quotesUsed: number;
   quotesLimit: number;

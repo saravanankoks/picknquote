@@ -15,6 +15,76 @@ import { auth, db } from '../config/firebase';
 import { User } from '../types/user';
 
 const INVITE_KEY = 'Welcome123';
+const GUEST_INVITE_KEY = 'welcome123';
+
+export const guestLogin = async (inviteCode: string): Promise<User> => {
+  if (inviteCode.toLowerCase() !== GUEST_INVITE_KEY) {
+    throw new Error('Invalid invite code');
+  }
+
+  // Generate a temporary guest ID
+  const guestId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Calculate trial dates (7 days from now)
+  const trialStartDate = new Date().toISOString();
+  const trialEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const guestUser: User = {
+    uid: guestId,
+    email: 'guest@themadrasmarketeer.com',
+    name: 'Guest User',
+    isGuest: true,
+    subscriptionTier: 'free',
+    quotesUsed: 0,
+    quotesLimit: 3,
+    trialStartDate,
+    trialEndDate,
+    isTrialActive: true,
+    createdAt: new Date().toISOString(),
+    lastLoginAt: new Date().toISOString()
+  };
+
+  // Store guest data in localStorage
+  localStorage.setItem('tmm_guest_user', JSON.stringify(guestUser));
+  
+  return guestUser;
+};
+
+export const getGuestUser = (): User | null => {
+  const stored = localStorage.getItem('tmm_guest_user');
+  if (!stored) return null;
+  
+  try {
+    const guestUser = JSON.parse(stored) as User;
+    
+    // Check if trial has expired
+    const now = new Date();
+    const trialEnd = new Date(guestUser.trialEndDate || '');
+    const isTrialActive = guestUser.isTrialActive && now < trialEnd;
+    
+    if (guestUser.isTrialActive && !isTrialActive) {
+      guestUser.isTrialActive = false;
+      localStorage.setItem('tmm_guest_user', JSON.stringify(guestUser));
+    }
+    
+    return guestUser;
+  } catch {
+    return null;
+  }
+};
+
+export const updateGuestUser = (updates: Partial<User>): void => {
+  const guestUser = getGuestUser();
+  if (!guestUser) return;
+  
+  const updatedUser = { ...guestUser, ...updates };
+  localStorage.setItem('tmm_guest_user', JSON.stringify(updatedUser));
+};
+
+export const clearGuestSession = (): void => {
+  localStorage.removeItem('tmm_guest_user');
+  localStorage.removeItem('tmm_quotes');
+};
 
 export const signUp = async (email: string, password: string, name: string, inviteKey: string): Promise<User> => {
   if (inviteKey !== INVITE_KEY) {
